@@ -1,22 +1,25 @@
-// Düzeltilmiş PokerController.java - TAM HALİ
-
 package com.planit.controller;
 
 import com.planit.model.Message;
 import com.planit.model.Task;
+import com.planit.model.RoomState; // Bu importu ekle
 import com.planit.service.RoomService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.messaging.simp.annotation.SendToUser; // Bu import önemli!
-import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
-@Controller
+@RestController
 public class PokerController {
 
     @Autowired
@@ -25,14 +28,41 @@ public class PokerController {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
-    @MessageMapping("/room/{roomId}/join")
-    public void joinRoom(@DestinationVariable String roomId, @Payload Message chatMessage, SimpMessageHeaderAccessor headerAccessor) {
-        String username = chatMessage.getSender();
+    // --- REST API for Room Creation ---
+    @PostMapping("/api/rooms")
+    public ResponseEntity<Map<String, String>> createRoom(@RequestBody Map<String, String> payload) {
+        String ownerName = payload.get("name");
+        if (ownerName == null || ownerName.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Owner name is required."));
+        }
+        String newRoomId = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        roomService.createRoom(newRoomId, ownerName);
+        return ResponseEntity.ok(Map.of("roomId", newRoomId));
+    }
+
+    // --- WebSocket Endpoints ---
+
+    /**
+     * Odaya yeni bir kullanıcı katıldığında bu metot tetiklenir.
+     * Hem güncel katılımcı listesini hem de (varsa) güncel görevi
+     * HERKESE AÇIK kanallara yeniden yayınlar.
+     * Bu sayede yeni katılan kullanıcı da odanın durumunu öğrenir.
+     */
+    @MessageMapping("/room/{roomId}/register")
+    public void register(@DestinationVariable String roomId, @Payload Message joinMessage, SimpMessageHeaderAccessor headerAccessor) {
+        String username = joinMessage.getSender();
         roomService.addUserToRoom(roomId, username);
         headerAccessor.getSessionAttributes().put("username", username);
-        headerAccessor.getSessionAttributes().put("roomId", roomId);
-        Set<String> usersInRoom = roomService.getUsersInRoom(roomId);
-        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/participants", usersInRoom);
+
+        // 1. Güncel katılımcı listesini HERKESE gönder.
+        Set<String> updatedParticipants = roomService.getUsersInRoom(roomId);
+        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/participants", updatedParticipants);
+
+        // 2. Mevcut görevi (eğer varsa) HERKESE gönder.
+        Task currentTask = roomService.getActiveTask(roomId);
+        if (currentTask != null) {
+            messagingTemplate.convertAndSend("/topic/room/" + roomId + "/task", currentTask);
+        }
     }
 
     @MessageMapping("/room/{roomId}/set-task")
@@ -41,16 +71,8 @@ public class PokerController {
         messagingTemplate.convertAndSend("/topic/room/" + roomId + "/task", task);
     }
 
-    // YENİ ve BASİTLEŞTİRİLMİŞ getTask metodu
-    @MessageMapping("/room/{roomId}/get-task")
-    @SendToUser("/queue/task")
-    public Task getTask(@DestinationVariable String roomId) {
-        return roomService.getActiveTask(roomId);
-    }
-
     @MessageMapping("/room/{roomId}/vote")
     public void vote(@DestinationVariable String roomId, @Payload Message voteMessage) {
-        String message = voteMessage.getSender() + " oy verdi: " + voteMessage.getContent();
-        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/votes", message);
+        // ... oylama mantığı
     }
 }

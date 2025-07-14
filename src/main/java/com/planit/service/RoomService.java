@@ -43,5 +43,20 @@ public class RoomService {
     public Task getActiveTask(String roomId) {
         return activeTasks.get(roomId);
     }
+    // RoomService.java'nın sonuna eklenecek yeni metot
+
+/**
+ * Yeni bir oda oluşturur, odayı oluşturan kişiyi hem sahip hem de ilk katılımcı olarak ekler.
+ * @param roomId Yeni odanın ID'si.
+ * @param ownerName Odayı oluşturan kişinin adı.
+ */
+public void createRoom(String roomId, String ownerName) {
+    // Oda ve katılımcılar map'ine yeni bir HashSet ile odayı ekle.
+    // Odayı oluşturan kişi, katılımcı listesindeki ilk kişidir.
+    Set<String> participants = new HashSet<>();
+    participants.add(ownerName);
+    rooms.put(roomId, participants);
+    // İleride "oda sahibi" mantığı için bu bilgiyi ayrı bir yerde de tutabiliriz.
+}
     
 }
