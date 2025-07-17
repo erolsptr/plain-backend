@@ -1,8 +1,8 @@
 package com.planit.controller;
 
 import com.planit.model.Message;
+import com.planit.model.RoomState;
 import com.planit.model.Task;
-import com.planit.model.RoomState; // Bu importu ekle
 import com.planit.service.RoomService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -28,7 +28,6 @@ public class PokerController {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
-    // --- REST API for Room Creation ---
     @PostMapping("/api/rooms")
     public ResponseEntity<Map<String, String>> createRoom(@RequestBody Map<String, String> payload) {
         String ownerName = payload.get("name");
@@ -40,39 +39,67 @@ public class PokerController {
         return ResponseEntity.ok(Map.of("roomId", newRoomId));
     }
 
-    // --- WebSocket Endpoints ---
-
-    /**
-     * Odaya yeni bir kullanıcı katıldığında bu metot tetiklenir.
-     * Hem güncel katılımcı listesini hem de (varsa) güncel görevi
-     * HERKESE AÇIK kanallara yeniden yayınlar.
-     * Bu sayede yeni katılan kullanıcı da odanın durumunu öğrenir.
-     */
     @MessageMapping("/room/{roomId}/register")
     public void register(@DestinationVariable String roomId, @Payload Message joinMessage, SimpMessageHeaderAccessor headerAccessor) {
         String username = joinMessage.getSender();
         roomService.addUserToRoom(roomId, username);
         headerAccessor.getSessionAttributes().put("username", username);
 
-        // 1. Güncel katılımcı listesini HERKESE gönder.
-        Set<String> updatedParticipants = roomService.getUsersInRoom(roomId);
-        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/participants", updatedParticipants);
-
-        // 2. Mevcut görevi (eğer varsa) HERKESE gönder.
-        Task currentTask = roomService.getActiveTask(roomId);
-        if (currentTask != null) {
-            messagingTemplate.convertAndSend("/topic/room/" + roomId + "/task", currentTask);
-        }
+        publishFullRoomState(roomId);
     }
 
     @MessageMapping("/room/{roomId}/set-task")
-    public void setTask(@DestinationVariable String roomId, @Payload Task task) {
-        roomService.setActiveTask(roomId, task);
-        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/task", task);
+    public void setTask(@DestinationVariable String roomId, @Payload Message taskMessage) {
+        String requester = taskMessage.getSender();
+        String owner = roomService.getRoomOwner(roomId);
+
+        if (owner == null || !owner.equals(requester)) {
+            return;
+        }
+
+        // Yeni Task nesnesini oluştururken Message'dan gelen tüm bilgileri kullanıyoruz.
+        Task newTask = new Task(
+            taskMessage.getContent(), 
+            taskMessage.getDescription(), 
+            taskMessage.getCardSet()
+        );
+        
+        roomService.setActiveTask(roomId, newTask);
+        roomService.clearVotes(roomId);
+
+        publishFullRoomState(roomId);
     }
 
     @MessageMapping("/room/{roomId}/vote")
     public void vote(@DestinationVariable String roomId, @Payload Message voteMessage) {
-        // ... oylama mantığı
+        String username = voteMessage.getSender();
+        String voteValue = voteMessage.getContent();
+
+        roomService.recordVote(roomId, username, voteValue);
+        Map<String, String> currentVotes = roomService.getVotes(roomId);
+        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/votes", currentVotes);
+    }
+
+    @MessageMapping("/room/{roomId}/reveal")
+    public void revealVotes(@DestinationVariable String roomId, @Payload Message revealMessage) {
+        String requester = revealMessage.getSender();
+        String owner = roomService.getRoomOwner(roomId);
+        
+        if (owner == null || !owner.equals(requester)) {
+            return;
+        }
+
+        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/reveal", Map.of("reveal", true));
+    }
+
+    private void publishFullRoomState(String roomId) {
+        RoomState currentRoomState = new RoomState();
+        currentRoomState.setOwner(roomService.getRoomOwner(roomId));
+        currentRoomState.setParticipants(roomService.getUsersInRoom(roomId));
+        currentRoomState.setActiveTask(roomService.getActiveTask(roomId));
+        currentRoomState.setVotes(roomService.getVotes(roomId) != null ? roomService.getVotes(roomId) : Collections.emptyMap());
+        currentRoomState.setAreVotesRevealed(false);
+
+        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/state", currentRoomState);
     }
 }

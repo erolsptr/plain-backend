@@ -1,30 +1,29 @@
 package com.planit.service;
 
+import com.planit.model.Task;
 import org.springframework.stereotype.Service;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import com.planit.model.Task;
 
 @Service
 public class RoomService {
+
     private final Map<String, Set<String>> rooms = new ConcurrentHashMap<>();
-    // YENİ: Her odanın aktif görevini tutacak map.
-    // Key: Oda ID'si, Value: Aktif Görev nesnesi
     private final Map<String, Task> activeTasks = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, String>> roomVotes = new ConcurrentHashMap<>();
+    private final Map<String, String> roomOwners = new ConcurrentHashMap<>();
 
     public void addUserToRoom(String roomId, String username) {
-        // Eğer oda yoksa, yeni bir Set (katılımcı listesi) ile oluştur.
-        // Varsa, mevcut listeye kullanıcıyı ekle.
         rooms.computeIfAbsent(roomId, k -> new HashSet<>()).add(username);
     }
 
     public void removeUserFromRoom(String roomId, String username) {
         if (rooms.containsKey(roomId)) {
             rooms.get(roomId).remove(username);
-            // Eğer oda boş kalırsa, hafızadan silelim.
             if (rooms.get(roomId).isEmpty()) {
                 rooms.remove(roomId);
             }
@@ -32,31 +31,39 @@ public class RoomService {
     }
 
     public Set<String> getUsersInRoom(String roomId) {
-        // Eğer oda yoksa, boş bir liste döndür.
         return rooms.getOrDefault(roomId, Collections.emptySet());
     }
 
     public void setActiveTask(String roomId, Task task) {
-    activeTasks.put(roomId, task);
+        activeTasks.put(roomId, task);
     }
 
     public Task getActiveTask(String roomId) {
         return activeTasks.get(roomId);
     }
-    // RoomService.java'nın sonuna eklenecek yeni metot
 
-/**
- * Yeni bir oda oluşturur, odayı oluşturan kişiyi hem sahip hem de ilk katılımcı olarak ekler.
- * @param roomId Yeni odanın ID'si.
- * @param ownerName Odayı oluşturan kişinin adı.
- */
-public void createRoom(String roomId, String ownerName) {
-    // Oda ve katılımcılar map'ine yeni bir HashSet ile odayı ekle.
-    // Odayı oluşturan kişi, katılımcı listesindeki ilk kişidir.
-    Set<String> participants = new HashSet<>();
-    participants.add(ownerName);
-    rooms.put(roomId, participants);
-    // İleride "oda sahibi" mantığı için bu bilgiyi ayrı bir yerde de tutabiliriz.
-}
-    
+    public void createRoom(String roomId, String ownerName) {
+        Set<String> participants = new HashSet<>();
+        participants.add(ownerName);
+        rooms.put(roomId, participants);
+        roomOwners.put(roomId, ownerName);
+    }
+
+    public void recordVote(String roomId, String username, String vote) {
+        roomVotes.computeIfAbsent(roomId, k -> new ConcurrentHashMap<>()).put(username, vote);
+    }
+
+    public Map<String, String> getVotes(String roomId) {
+        return roomVotes.get(roomId);
+    }
+
+    public void clearVotes(String roomId) {
+        if (roomVotes.containsKey(roomId)) {
+            roomVotes.get(roomId).clear();
+        }
+    }
+
+    public String getRoomOwner(String roomId) {
+        return roomOwners.get(roomId);
+    }
 }
