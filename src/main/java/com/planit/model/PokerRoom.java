@@ -1,9 +1,10 @@
 package com.planit.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -14,17 +15,16 @@ import java.util.Set;
 @Table(name = "poker_rooms")
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class PokerRoom {
 
     @Id
-    @Column(length = 6) // Oda ID'miz 6 karakterliydi
+    @Column(length = 6)
     private String id;
-
-    // --- İLİŞKİLER ---
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
+    @ToString.Exclude // Lombok'un sonsuz döngüye girmesini engeller
+    @EqualsAndHashCode.Exclude // Lombok'un sonsuz döngüye girmesini engeller
     private User owner;
 
     @ManyToMany
@@ -33,6 +33,8 @@ public class PokerRoom {
             joinColumns = @JoinColumn(name = "poker_room_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<User> participants = new HashSet<>();
 
     @OneToMany(
@@ -40,15 +42,17 @@ public class PokerRoom {
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<Task> tasks = new ArrayList<>();
 
-    // Helper metotlar (ilişkileri senkronize tutmak için)
+    // --- Helper Metotlar ---
     public void addTask(Task task) {
-        tasks.add(task);
+        this.tasks.add(task);
         task.setPokerRoom(this);
     }
 
     public void addParticipant(User user) {
-        participants.add(user);
+        this.participants.add(user);
     }
 }

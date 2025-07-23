@@ -20,8 +20,6 @@ public class Vote {
     @Column(nullable = false)
     private String voteValue;
 
-    // --- İLİŞKİLER ---
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnore
@@ -31,5 +29,4 @@ public class Vote {
     @JoinColumn(name = "task_id", nullable = false)
     @JsonIgnore
     private Task task;
-
 }

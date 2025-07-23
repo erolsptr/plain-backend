@@ -23,20 +23,17 @@ public class Task {
     @Column(nullable = false)
     private String title;
 
-    @Column(columnDefinition = "TEXT") // Uzun açıklamalar için
+    @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String cardSet;
-
-    // --- İLİŞKİLER ---
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "poker_room_id", nullable = false)
-    @JsonIgnore // JSON'a çevirirken sonsuz döngüyü önlemek için
+    @JsonIgnore
     private PokerRoom pokerRoom;
 
-    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<Vote> votes = new ArrayList<>();
-    
 }

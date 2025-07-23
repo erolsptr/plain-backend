@@ -1,14 +1,19 @@
 package com.planit.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -24,49 +29,51 @@ public class User implements UserDetails {
     private String email;
 
     @Column(nullable = false)
+    @JsonIgnore // Şifreyi asla JSON olarak gönderme
     private String password;
 
     @Column(nullable = false)
     private String name;
 
-    // --- UserDetails METOTLARI ---
-    // Bu metotlar, User nesnemizi Spring Security'nin anlayacağı formata sokar.
+    // --- İLİŞKİLER ---
+    @OneToMany(mappedBy = "owner")
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Set<PokerRoom> ownedRooms = new HashSet<>();
 
+    @ManyToMany(mappedBy = "participants")
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Set<PokerRoom> joinedRooms = new HashSet<>();
+
+
+    // --- UserDetails METOTLARI (Aynı kalıyor) ---
     @Override
-    @Transient // Bu alanın veritabanı ile ilişkili olmadığını belirtir.
+    @Transient
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Şimdilik tüm kullanıcılara basit bir 'USER' rolü veriyoruz.
-        // İleride rolleri veritabanında saklayabiliriz.
         return List.of(new SimpleGrantedAuthority("ROLE_USER"));
     }
 
     @Override
     public String getUsername() {
-        // Spring Security için "username", bizim sistemimizdeki "email"dir.
         return this.email;
     }
 
     @Override
     @Transient
-    public boolean isAccountNonExpired() {
-        return true; // Hesap süresiz geçerli.
-    }
+    public boolean isAccountNonExpired() { return true; }
 
     @Override
     @Transient
-    public boolean isAccountNonLocked() {
-        return true; // Hesap kilitli değil.
-    }
+    public boolean isAccountNonLocked() { return true; }
 
     @Override
     @Transient
-    public boolean isCredentialsNonExpired() {
-        return true; // Parola süresiz geçerli.
-    }
+    public boolean isCredentialsNonExpired() { return true; }
 
     @Override
     @Transient
-    public boolean isEnabled() {
-        return true; // Hesap aktif.
-    }
+    public boolean isEnabled() { return true; }
 }
