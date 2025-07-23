@@ -2,10 +2,9 @@ package com.planit.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,8 +16,9 @@ import java.util.Set;
 
 @Entity
 @Table(name = "users")
-@Data
-@NoArgsConstructor
+@Getter // Sadece getter metotlarını oluştur
+@Setter // Sadece setter metotlarını oluştur
+@NoArgsConstructor // Parametresiz (boş) constructor'ı oluştur
 public class User implements UserDetails {
 
     @Id
@@ -29,29 +29,23 @@ public class User implements UserDetails {
     private String email;
 
     @Column(nullable = false)
-    @JsonIgnore // Şifreyi asla JSON olarak gönderme
+    @JsonIgnore
     private String password;
 
     @Column(nullable = false)
     private String name;
 
-    // --- İLİŞKİLER ---
     @OneToMany(mappedBy = "owner")
     @JsonIgnore
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     private Set<PokerRoom> ownedRooms = new HashSet<>();
 
     @ManyToMany(mappedBy = "participants")
     @JsonIgnore
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     private Set<PokerRoom> joinedRooms = new HashSet<>();
 
 
-    // --- UserDetails METOTLARI (Aynı kalıyor) ---
+    // --- UserDetails METOTLARI ---
     @Override
-    @Transient
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_USER"));
     }
@@ -61,19 +55,34 @@ public class User implements UserDetails {
         return this.email;
     }
 
+    // Bu @Transient'lar UserDetails metotları için gerekli değil,
+    // çünkü bu metotların başında "get" veya "is" olduğu için JPA bunları sütun olarak algılamaz.
+    // Kodu temiz tutmak için kaldırabiliriz.
     @Override
-    @Transient
     public boolean isAccountNonExpired() { return true; }
 
     @Override
-    @Transient
     public boolean isAccountNonLocked() { return true; }
 
     @Override
-    @Transient
     public boolean isCredentialsNonExpired() { return true; }
 
     @Override
-    @Transient
     public boolean isEnabled() { return true; }
+
+    // Lombok'un @Data'sının neden olduğu sonsuz döngüyü önlemek için
+    // hashCode ve equals'ı manuel olarak, sadece ID'ye göre tanımlıyoruz.
+    // Bu, JPA ilişkilerinde en güvenli yöntemdir.
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : 0;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        return id != null ? id.equals(user.id) : user.id == null;
+    }
 }
