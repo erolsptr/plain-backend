@@ -57,12 +57,14 @@ public class PokerController {
             return;
         }
 
-        // Yeni Task nesnesini oluştururken Message'dan gelen tüm bilgileri kullanıyoruz.
-        Task newTask = new Task(
-            taskMessage.getContent(), 
-            taskMessage.getDescription(), 
-            taskMessage.getCardSet()
-        );
+        // DEĞİŞİKLİK: Task nesnesini artık setter metotları ile oluşturuyoruz.
+        Task newTask = new Task();
+        newTask.setTitle(taskMessage.getContent());
+        newTask.setDescription(taskMessage.getDescription());
+        newTask.setCardSet(taskMessage.getCardSet());
+        
+        // Bu noktada henüz PokerRoom ilişkisini kurmuyoruz, çünkü RoomService
+        // henüz veritabanından oda getiremiyor. O bir sonraki adımda olacak.
         
         roomService.setActiveTask(roomId, newTask);
         roomService.clearVotes(roomId);
