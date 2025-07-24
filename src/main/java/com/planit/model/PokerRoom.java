@@ -1,10 +1,9 @@
 package com.planit.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -13,7 +12,8 @@ import java.util.Set;
 
 @Entity
 @Table(name = "poker_rooms")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 public class PokerRoom {
 
@@ -23,8 +23,6 @@ public class PokerRoom {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
-    @ToString.Exclude // Lombok'un sonsuz döngüye girmesini engeller
-    @EqualsAndHashCode.Exclude // Lombok'un sonsuz döngüye girmesini engeller
     private User owner;
 
     @ManyToMany
@@ -33,8 +31,6 @@ public class PokerRoom {
             joinColumns = @JoinColumn(name = "poker_room_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     private Set<User> participants = new HashSet<>();
 
     @OneToMany(
@@ -42,11 +38,8 @@ public class PokerRoom {
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     private List<Task> tasks = new ArrayList<>();
 
-    // --- Helper Metotlar ---
     public void addTask(Task task) {
         this.tasks.add(task);
         task.setPokerRoom(this);
@@ -54,5 +47,18 @@ public class PokerRoom {
 
     public void addParticipant(User user) {
         this.participants.add(user);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PokerRoom pokerRoom = (PokerRoom) o;
+        return id != null ? id.equals(pokerRoom.id) : pokerRoom.id == null;
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : 0;
     }
 }
