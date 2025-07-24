@@ -8,7 +8,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
-// Vote'un ID'si Long tipinde olduğu için JpaRepository<Vote, Long> kullanıyoruz.
 @Repository
 public interface VoteRepository extends JpaRepository<Vote, Long> {
 
