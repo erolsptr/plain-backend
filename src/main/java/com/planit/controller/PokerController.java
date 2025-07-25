@@ -12,7 +12,9 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping; // YENİ IMPORT
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable; // YENİ IMPORT
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -43,6 +45,20 @@ public class PokerController {
         String userEmail = authentication.getName();
         return ResponseEntity.ok(roomService.findRoomsByUserEmail(userEmail));
     }
+
+    // --- YENİ EKLENEN ENDPOINT ---
+    @DeleteMapping("/api/rooms/{roomId}")
+    public ResponseEntity<Void> deleteRoom(@PathVariable String roomId, Authentication authentication) {
+        String userEmail = authentication.getName();
+        // Asıl işi yapması için isteği RoomService'e iletiyoruz.
+        roomService.deleteRoom(roomId, userEmail);
+        // İşlem başarılı ve geri gönderilecek bir içerik yok (HTTP 204 No Content)
+        return ResponseEntity.noContent().build();
+    }
+    // --- YENİ ENDPOINT SONU ---
+
+
+    // --- WebSocket Mesaj Eşlemeleri (DEĞİŞTİRİLMEDİ) ---
 
     @MessageMapping("/room/{roomId}/register")
     public void register(@DestinationVariable String roomId, @Payload Message joinMessage, SimpMessageHeaderAccessor headerAccessor) {
@@ -88,25 +104,18 @@ public class PokerController {
         messagingTemplate.convertAndSend("/topic/room/" + roomId + "/reveal", Map.of("reveal", true));
     }
     
-    // YENİ: Sadece "Yeni Tur Başlat" için endpoint
     @MessageMapping("/room/{roomId}/new-round")
     public void newRound(@DestinationVariable String roomId, @Payload Message newRoundMessage) {
-        // Yetki kontrolü
         String requester = newRoundMessage.getSender();
         String owner = roomService.getRoomOwner(roomId);
         if (owner == null || !owner.equals(requester)) {
             return;
         }
-
-        // Sadece oyları sıfırlayan yeni servis metodunu çağır
         roomService.resetLatestTaskVotes(roomId);
-
-        // Oyları sıfırlanmış güncel durumu herkese gönder
         publishFullRoomState(roomId);
     }
 
     private void publishFullRoomState(String roomId) {
-        // Bu helper metot, birden fazla yerden çağrıldığı için çok faydalı ve korunuyor.
         RoomState currentRoomState = new RoomState();
         currentRoomState.setOwner(roomService.getRoomOwner(roomId));
         currentRoomState.setParticipants(roomService.getUsersInRoom(roomId));

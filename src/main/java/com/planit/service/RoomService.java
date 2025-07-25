@@ -9,6 +9,7 @@ import com.planit.repository.UserRepository;
 import com.planit.repository.VoteRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -25,9 +26,8 @@ public class RoomService {
     private final PokerRoomRepository pokerRoomRepository;
     private final UserRepository userRepository;
     private final TaskRepository taskRepository;
-    private final VoteRepository voteRepository; // Vote'ları veritabanından silmek için eklendi
+    private final VoteRepository voteRepository; 
 
-    // --- MEVCUT WEBSOCKET AKIŞI İÇİN IN-MEMORY YAPI (KORUNUYOR) ---
     private final Map<String, Set<String>> rooms = new ConcurrentHashMap<>();
     private final Map<String, Task> activeTasks = new ConcurrentHashMap<>();
     private final Map<String, Map<String, String>> roomVotes = new ConcurrentHashMap<>();
@@ -59,7 +59,34 @@ public class RoomService {
         return roomOwners.get(roomId);
     }
 
-    // --- GÜNCELLENMİŞ VE YENİ METOTLAR ---
+        // --- LÜTFEN MEVCUT deleteRoom METODUNU SİLİP BUNU YAPIŞTIRIN ---
+    @Transactional
+    public void deleteRoom(String roomId, String requesterEmail) {
+        // 1. İsteği yapan kullanıcıyı veritabanından bul
+        User requester = userRepository.findByEmail(requesterEmail)
+                .orElseThrow(() -> new RuntimeException("İsteği yapan kullanıcı bulunamadı: " + requesterEmail));
+
+        // 2. Silinecek odayı veritabanından bul
+        PokerRoom roomToDelete = pokerRoomRepository.findById(roomId)
+                .orElseThrow(() -> new RuntimeException("Silinecek oda bulunamadı: " + roomId));
+
+        // 3. Odanın sahibinin adını al
+        String ownerName = roomToDelete.getOwner().getName();
+
+        // 4. Güvenlik Kontrolü: İsteği yapanın adı ile odanın sahibinin adı aynı mı?
+        if (!requester.getName().equals(ownerName)) {
+            throw new AccessDeniedException("Bu odayı silme yetkiniz yok.");
+        }
+
+        // 5. Yetki kontrolü başarılı, şimdi silebiliriz.
+        pokerRoomRepository.deleteById(roomId);
+
+        // 6. Hafızadaki haritaları temizle.
+        rooms.remove(roomId);
+        activeTasks.remove(roomId);
+        roomVotes.remove(roomId);
+        roomOwners.remove(roomId);
+    }
 
     @Transactional
     public void createRoom(String roomId, String ownerEmail) {
@@ -70,7 +97,7 @@ public class RoomService {
         Set<String> participants = new HashSet<>();
         participants.add(ownerName);
         rooms.put(roomId, participants);
-        roomOwners.put(roomId, ownerName);
+        roomOwners.put(roomId, ownerName); // Burası projenin tutarsızlık kaynağı
 
         PokerRoom newRoom = new PokerRoom();
         newRoom.setId(roomId);
@@ -103,20 +130,15 @@ public class RoomService {
                 )).collect(Collectors.toSet());
     }
 
-    // YENİ: Sadece oyları sıfırlayan metot
     @Transactional
     public void resetLatestTaskVotes(String roomId) {
-        // 1. Önce in-memory oyları temizle
         clearVotes(roomId);
         
-        // 2. Sonra veritabanındaki oyları temizle
         PokerRoom room = pokerRoomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("Oda veritabanında bulunamadı: " + roomId));
 
         if (!room.getTasks().isEmpty()) {
-            // Aktif olan son görevi al
             Task latestTask = room.getTasks().get(room.getTasks().size() - 1);
-            // Bu göreve bağlı tüm oy kayıtlarını veritabanından sil
             voteRepository.deleteAll(latestTask.getVotes());
         }
     }
