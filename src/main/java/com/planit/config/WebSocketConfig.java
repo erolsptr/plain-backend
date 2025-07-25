@@ -12,9 +12,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
 public void registerStompEndpoints(StompEndpointRegistry registry) {
-    // İstemcilerin (React) WebSocket'e bağlanacağı endpoint.
     // setAllowedOriginPatterns("*") diyerek TÜM kaynaklardan gelen bağlantılara izin veriyoruz.
-    // Bu, geliştirme aşaması için en basit ve en etkili çözümdür.
+    // Bu, geliştirme aşaması için en basit ve en etkili çözüm.
     registry.addEndpoint("/ws-poker").setAllowedOriginPatterns("*").withSockJS();
 }
 
