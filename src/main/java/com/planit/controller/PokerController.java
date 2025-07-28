@@ -12,13 +12,14 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.DeleteMapping; // YENİ IMPORT
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable; // YENİ IMPORT
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Collections;
+import java.util.List; // YENİ IMPORT
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -45,15 +46,30 @@ public class PokerController {
         String userEmail = authentication.getName();
         return ResponseEntity.ok(roomService.findRoomsByUserEmail(userEmail));
     }
-
-    // --- YENİ EKLENEN ENDPOINT ---
+    
     @DeleteMapping("/api/rooms/{roomId}")
     public ResponseEntity<Void> deleteRoom(@PathVariable String roomId, Authentication authentication) {
         String userEmail = authentication.getName();
-        // Asıl işi yapması için isteği RoomService'e iletiyoruz.
         roomService.deleteRoom(roomId, userEmail);
-        // İşlem başarılı ve geri gönderilecek bir içerik yok (HTTP 204 No Content)
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/api/rooms/{roomId}/save-result")
+    public ResponseEntity<Void> saveVotingResult(@PathVariable String roomId, Authentication authentication) {
+        String userEmail = authentication.getName();
+        roomService.saveCurrentVotingResult(roomId, userEmail);
+        publishFullRoomState(roomId);
+        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/history-updated", "update");
+        return ResponseEntity.ok().build();
+    }
+    
+    // --- YENİ EKLENEN ENDPOINT: GEÇMİŞ OYLAMALARI GETİRME ---
+    @GetMapping("/api/rooms/{roomId}/tasks")
+    public ResponseEntity<List<Map<String, Object>>> getTaskHistory(@PathVariable String roomId, Authentication authentication) {
+        String userEmail = authentication.getName();
+        // Asıl işi (yetki kontrolü, veriyi DB'den çekme) yapması için Service'e devrediyoruz.
+        List<Map<String, Object>> history = roomService.getTaskHistoryForRoom(roomId, userEmail);
+        return ResponseEntity.ok(history);
     }
     // --- YENİ ENDPOINT SONU ---
 

@@ -16,9 +16,9 @@ import java.util.Set;
 
 @Entity
 @Table(name = "users")
-@Getter // Sadece getter metotlarını oluştur
-@Setter // Sadece setter metotlarını oluştur
-@NoArgsConstructor // Parametresiz (boş) constructor'ı oluştur
+@Getter
+@Setter
+@NoArgsConstructor
 public class User implements UserDetails {
 
     @Id
@@ -32,8 +32,10 @@ public class User implements UserDetails {
     @JsonIgnore
     private String password;
 
-    @Column(nullable = false)
+    // --- BU ALAN GÜNCELLENDİ ---
+    @Column(nullable = false, unique = true) // 'unique = true' eklendi
     private String name;
+    // --- GÜNCELLEME SONU ---
 
     @OneToMany(mappedBy = "owner")
     @JsonIgnore
@@ -54,10 +56,7 @@ public class User implements UserDetails {
     public String getUsername() {
         return this.email;
     }
-
-    // Bu @Transient'lar UserDetails metotları için gerekli değil,
-    // çünkü bu metotların başında "get" veya "is" olduğu için JPA bunları sütun olarak algılamaz.
-    // Kodu temiz tutmak için kaldırabiliriz.
+    
     @Override
     public boolean isAccountNonExpired() { return true; }
 
@@ -70,9 +69,6 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() { return true; }
 
-    // Lombok'un @Data'sının neden olduğu sonsuz döngüyü önlemek için
-    // hashCode ve equals'ı manuel olarak, sadece ID'ye göre tanımlıyoruz.
-    // Bu, JPA ilişkilerinde en güvenli yöntemdir.
     @Override
     public int hashCode() {
         return id != null ? id.hashCode() : 0;
