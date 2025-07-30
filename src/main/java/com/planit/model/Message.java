@@ -5,7 +5,7 @@ public class Message {
     private String content;
     private String description;
     private MessageType type;
-    private String cardSet; // Yeni alan eklendi
+    private String cardSet; 
 
     public enum MessageType {
         JOIN,
@@ -17,7 +17,6 @@ public class Message {
     public Message() {
     }
 
-    // --- Mevcut Getter'lar ve Setter'lar ---
     public String getSender() {
         return sender;
     }

@@ -6,7 +6,7 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>3.5.3</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/> 
 	</parent>
 	<groupId>com.planit</groupId>
 	<artifactId>plain</artifactId>
@@ -31,13 +31,11 @@
 	</properties>
 	<dependencies>
 		
-		<!-- GÜVENLİK (KİMLİK DOĞRULAMA VE YETKİLENDİRME) -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
-		<!-- YENİ: JSON WEB TOKEN (JWT) İÇİN GEREKLİ KÜTÜPHANELER -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-api</artifactId>
@@ -69,7 +67,6 @@
 			<scope>runtime</scope>
 		</dependency>
 
-		<!-- MEVCUT BAĞIMLILIKLAR -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>

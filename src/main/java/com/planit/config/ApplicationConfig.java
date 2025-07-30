@@ -1,5 +1,3 @@
-// YENİ DOSYA: ApplicationConfig.java
-
 package com.planit.config;
 
 import com.planit.repository.UserRepository;

@@ -32,10 +32,9 @@ public class User implements UserDetails {
     @JsonIgnore
     private String password;
 
-    // --- BU ALAN GÜNCELLENDİ ---
-    @Column(nullable = false, unique = true) // 'unique = true' eklendi
+    
+    @Column(nullable = false, unique = true) 
     private String name;
-    // --- GÜNCELLEME SONU ---
 
     @OneToMany(mappedBy = "owner")
     @JsonIgnore
@@ -46,7 +45,6 @@ public class User implements UserDetails {
     private Set<PokerRoom> joinedRooms = new HashSet<>();
 
 
-    // --- UserDetails METOTLARI ---
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_USER"));

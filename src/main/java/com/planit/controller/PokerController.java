@@ -3,8 +3,10 @@ package com.planit.controller;
 import com.planit.model.Message;
 import com.planit.model.RoomState;
 import com.planit.model.Task;
+import com.planit.model.dto.TaskCreationRequest;
 import com.planit.service.RoomService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -16,10 +18,11 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Collections;
-import java.util.List; // YENİ IMPORT
+import java.util.List; 
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -63,19 +66,38 @@ public class PokerController {
         return ResponseEntity.ok().build();
     }
     
-    // --- YENİ EKLENEN ENDPOINT: GEÇMİŞ OYLAMALARI GETİRME ---
     @GetMapping("/api/rooms/{roomId}/tasks")
     public ResponseEntity<List<Map<String, Object>>> getTaskHistory(@PathVariable String roomId, Authentication authentication) {
         String userEmail = authentication.getName();
-        // Asıl işi (yetki kontrolü, veriyi DB'den çekme) yapması için Service'e devrediyoruz.
         List<Map<String, Object>> history = roomService.getTaskHistoryForRoom(roomId, userEmail);
         return ResponseEntity.ok(history);
     }
+    
+    @PostMapping("/api/rooms/{roomId}/tasks")
+    public ResponseEntity<Task> createTaskInRoom(
+            @PathVariable String roomId,
+            @RequestBody TaskCreationRequest taskRequest,
+            Authentication authentication) {
+        
+        String userEmail = authentication.getName();
+        Task createdTask = roomService.createTask(roomId, taskRequest, userEmail);
+        
+        // YENİ GÖREV OLUŞTURULDUĞUNDA, HERKESE LİSTELERİNİ YENİLEMESİ İÇİN SİNYAL GÖNDER
+        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/history-updated", "update");
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdTask);
+    }
+
+    // --- YENİ EKLENEN ENDPOINT: HAZIRDAKİ GÖREVLERİ GETİRME ---
+    @GetMapping("/api/rooms/{roomId}/pending-tasks")
+    public ResponseEntity<List<Task>> getPendingTasks(@PathVariable String roomId, Authentication authentication) {
+        String userEmail = authentication.getName();
+        List<Task> pendingTasks = roomService.getPendingTasksForRoom(roomId, userEmail);
+        return ResponseEntity.ok(pendingTasks);
+    }
     // --- YENİ ENDPOINT SONU ---
 
-
-    // --- WebSocket Mesaj Eşlemeleri (DEĞİŞTİRİLMEDİ) ---
-
+    // --- WebSocket Mesaj Eşlemeleri ---
     @MessageMapping("/room/{roomId}/register")
     public void register(@DestinationVariable String roomId, @Payload Message joinMessage, SimpMessageHeaderAccessor headerAccessor) {
         String username = joinMessage.getSender();
@@ -85,18 +107,18 @@ public class PokerController {
     }
 
     @MessageMapping("/room/{roomId}/set-task")
-    public void setTask(@DestinationVariable String roomId, @Payload Message taskMessage) {
-        String requester = taskMessage.getSender();
-        String owner = roomService.getRoomOwner(roomId);
-        if (owner == null || !owner.equals(requester)) {
+    public void setTask(@DestinationVariable String roomId, @Payload Task task, SimpMessageHeaderAccessor headerAccessor) {
+        // Payload'dan gönderenin adını almak yerine, daha güvenli bir yöntemle
+        // WebSocket session'ından alıyoruz.
+        String requesterName = (String) headerAccessor.getSessionAttributes().get("username");
+        
+        String ownerName = roomService.getRoomOwner(roomId);
+        if (ownerName == null || !ownerName.equals(requesterName)) {
             return;
         }
-        Task newTask = new Task();
-        newTask.setTitle(taskMessage.getContent());
-        newTask.setDescription(taskMessage.getDescription());
-        newTask.setCardSet(taskMessage.getCardSet());
         
-        roomService.setActiveTask(roomId, newTask);
+        // Artık yeni bir Task nesnesi oluşturmuyoruz. Gelenin kendisini kullanıyoruz.
+        roomService.setActiveTask(roomId, task); 
         roomService.clearVotes(roomId);
         publishFullRoomState(roomId);
     }

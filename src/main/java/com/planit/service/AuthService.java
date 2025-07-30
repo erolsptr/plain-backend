@@ -2,7 +2,7 @@ package com.planit.service;
 
 import com.planit.model.User;
 import com.planit.model.dto.LoginRequest;
-import com.planit.model.dto.RegisterRequest; // Yeni DTO'yu import et
+import com.planit.model.dto.RegisterRequest; 
 import com.planit.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -30,7 +30,7 @@ public class AuthService {
             return null; 
         }
 
-        // DTO'dan gelen verilerle yeni bir User entity'si oluşturuyoruz.
+        
         User newUser = new User();
         newUser.setName(request.name());
         newUser.setEmail(request.email());

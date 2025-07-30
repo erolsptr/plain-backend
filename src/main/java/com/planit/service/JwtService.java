@@ -22,7 +22,7 @@ public class JwtService {
     // Gerçek bir uygulamada bu, application.properties'den okunmalıdır.
     private static final String JWT_SECRET = "4D6251655468576D5A7134743777217A25432A462D4A614E645267556B587032";
 
-    // Token geçerlilik süresi (örneğin 24 saat)
+    // Token geçerlilik süresi
     private static final long EXPIRATION_TIME = 1000 * 60 * 60 * 24;
 
      public String generateToken(String username) {
@@ -63,12 +63,12 @@ public class JwtService {
     }
 
     private Claims extractAllClaims(String token) {
-    // parserBuilder() yerine doğrudan parser() metodunu kullanıyoruz.
+   
     return Jwts.parser()
             .setSigningKey(getSigningKey())
             .build()
-            .parseSignedClaims(token) // parseClaimsJws yerine parseSignedClaims
-            .getPayload(); // getBody yerine getPayload
+            .parseSignedClaims(token) 
+            .getPayload(); 
 }
 
     private Key getSigningKey() {

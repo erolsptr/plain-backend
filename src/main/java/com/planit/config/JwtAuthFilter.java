@@ -18,7 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 @Component
-@RequiredArgsConstructor // Lombok: final alanlar için bir constructor oluşturur.
+@RequiredArgsConstructor 
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;

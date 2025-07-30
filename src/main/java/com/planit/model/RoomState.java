@@ -11,12 +11,9 @@ public class RoomState {
     private Map<String, String> votes;
     private boolean areVotesRevealed;
 
-    // Hatanın ana kaynağı: new RoomState() çağrısının çalışması için
-    // bu boş constructor'a ihtiyaç var.
     public RoomState() {
     }
 
-    // İkinci kaynak: PokerController'daki tüm "set" metodları burada tanımlı olmalı.
     
     public String getOwner() {
         return owner;

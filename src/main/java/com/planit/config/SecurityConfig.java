@@ -29,13 +29,13 @@ public class SecurityConfig {
         http
             .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.disable())
-            // --- BU BÖLÜM GÜNCELLENDİ (DAHA NET KURALLAR) ---
+            
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/ws-poker/**").permitAll() // Herkese açık alanlar
-                .requestMatchers("/api/rooms/**").authenticated() // /api/rooms/ ile başlayan her şey kimlik doğrulaması gerektirir
-                .anyRequest().authenticated() // Geriye kalan her şey de (güvenlik için) kimlik doğrulaması gerektirir
+                .requestMatchers("/api/auth/**", "/ws-poker/**").permitAll() 
+                .requestMatchers("/api/rooms/**").authenticated() 
+                .anyRequest().authenticated() 
             )
-            // --- GÜNCELLEME SONU ---
+            
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authenticationProvider(authenticationProvider)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

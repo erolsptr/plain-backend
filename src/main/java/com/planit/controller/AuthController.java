@@ -2,9 +2,9 @@ package com.planit.controller;
 
 import com.planit.model.User;
 import com.planit.model.dto.LoginRequest;
-import com.planit.model.dto.RegisterRequest; // Yeni DTO'yu import et
+import com.planit.model.dto.RegisterRequest; 
 import com.planit.service.AuthService;
-import com.planit.service.AuthResponse; // AuthResponse'u import et
+import com.planit.service.AuthResponse; 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;

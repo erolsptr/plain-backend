@@ -8,11 +8,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
-@Repository
 public interface VoteRepository extends JpaRepository<Vote, Long> {
-
-    // Spring Data JPA, bu metot isminden, User ve Task nesnelerine göre
-    // ilgili Vote kaydını bulan bir sorgu oluşturur.
-    Optional<Vote> findByUserAndTask(User user, Task task);
-
+    long countByTaskId(Long taskId);
 }
